@@ -38,6 +38,8 @@ class Eimmk:
         except PostNotFoundException:
             # TODO send error message over mail
             pass
+    
+        
 
 
 
