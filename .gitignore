@@ -1,5 +1,5 @@
 venv/
 .vscode/settings.json
 config.ini
-__pycache__/eimmk.cpython-37.pyc
-__pycache__/test_datethings.cpython-37-pytest-6.0.2.pyc
+__pycache__/
+.pytest_cache
