@@ -1,5 +1,5 @@
 venv/
-.vscode/settings.json
+.vscode/
 config.ini
 __pycache__/
 .pytest_cache
