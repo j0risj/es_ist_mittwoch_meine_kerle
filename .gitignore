@@ -3,3 +3,7 @@ venv/
 config.ini
 __pycache__/
 .pytest_cache
+EiMmK.log
+EiMmK_debug.log
+randomshitesting.py
+logging.config

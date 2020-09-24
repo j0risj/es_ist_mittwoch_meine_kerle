@@ -6,15 +6,13 @@ import typing
 import json
 import smtplib
 import logging
+import sys
+from discordhandler import DiscordHandler
+from logging.handlers import SMTPHandler
 from datetime import datetime as dt
 
 # TODO more error logging
-# TODO implement mail or discord logging handler for errors
-# TODO implement discord webhook notification including config
-
-CONFIG = __load_config()
-logger = logging.getLogger("EiMmK")
-REDDIT = __init_reddit()
+# TODO implement ignored config values
 
 
 class PostNotFoundException(Exception):
@@ -33,7 +31,6 @@ def __load_config():
     """
     config = configparser.ConfigParser()
     config.read("config.ini")
-    config = config["DEFAULT"]
     return config
 
 
@@ -51,11 +48,31 @@ def __setup_logging() -> None:
     fh_debug = logging.FileHandler("EiMmK_debug.log", encoding="utf-8")
     fh_debug.setFormatter(formatter)
     fh_debug.setLevel(logging.DEBUG)
-    eh = logging._handlers.SMTPHandler("smtp.mail.de", "watson@mail.de",
-                                       ["joma12912@gmail.com"])
     logger.addHandler(ch)
     logger.addHandler(fh)
     logger.addHandler(fh_debug)
+    if CONFIG.getboolean("logging","enable_mail_logging"):
+        mailcfg = CONFIG["mail_logging"]
+        mailhost = (mailcfg["mailhost"], mailcfg["mailport"])
+        toaddrs = mailcfg["toaddrs"].split(",")
+        credentials = (mailcfg["username"], mailcfg["password"])
+        eh = SMTPHandler(mailhost=mailhost, 
+                         fromaddr=mailcfg["fromaddr"],
+                         toaddrs=toaddrs,
+                         subject=mailcfg["subject"],
+                         credentials=credentials,
+                         secure=(),
+                         timeout=CONFIG.getint("mail_logging",
+                                               "timeout"))
+        eh.setFormatter(formatter)
+        eh.setLevel(logging.WARNING)
+        logger.addHandler(eh)
+    if CONFIG.getboolean("logging","enable_discord_logging"):
+        dh = DiscordHandler(CONFIG["discord_logging"]["username"],
+                            CONFIG["discord_logging"]["webhook_url"])
+        dh.setFormatter(formatter)
+        dh.setLevel(logging.WARNING)
+        logger.addHandler(dh)
     logger.debug("Successfully setup logger")
 
 
@@ -66,9 +83,9 @@ def __init_reddit() -> praw.Reddit:
     Returns:
         praw.Reddit: Initialized reddit instance
     """
-    reddit = praw.Reddit(client_id=CONFIG["client_id"],
-                         client_secret=CONFIG["client_secret"],
-                         user_agent=CONFIG["user_agent"])
+    reddit = praw.Reddit(client_id=CONFIG["reddit"]["client_id"],
+                         client_secret=CONFIG["reddit"]["client_secret"],
+                         user_agent=CONFIG["reddit"]["user_agent"])
     logger.debug("Successfully initialized praw reddit instance")
     return reddit
 
@@ -160,10 +177,14 @@ def __get_last_wednesday_date(now: dt = None) -> datetime.date:
     now = dt.combine(now.date(), datetime.time())
     return now
 
+CONFIG = __load_config()
+logger = logging.getLogger("EiMmK")
+__setup_logging()
+REDDIT = __init_reddit()
 
 if __name__ == "__main__":
-    post = get_new_post()
-    if post is None:
-        logger.info("No new post found, exiting...")
-    else:
-        
+    logger.warning("Test")
+    # post = get_new_post()
+    # if post is None:
+    #     logger.info("No new post found, exiting...")
+    # else:
