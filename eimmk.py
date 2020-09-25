@@ -1,6 +1,7 @@
 import praw
 import configparser
 import logging
+import logging.config
 import datetime
 import typing
 import json
@@ -10,6 +11,11 @@ import sys
 from discordhandler import DiscordHandler
 from logging.handlers import SMTPHandler
 from datetime import datetime as dt
+
+
+logging.config.fileConfig("basic_logging_config.ini")
+logger = logging.getLogger("eimmk")
+
 
 # TODO more error logging
 # TODO implement ignored config values
@@ -30,29 +36,16 @@ def __load_config():
         configparser.SectionProxy: relevant config dictionary
     """
     config = configparser.ConfigParser()
-    config.read("config.ini")
+    config.read("config.ini", encoding="utf-8")
     return config
 
 
-def __setup_logging() -> None:
+def __setup_logging() -> logging.Logger:
     """Sets up logging to console and files.
     """
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s]: %(message)s", "%Y-%m-%d %H:%M:%S")
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-    fh = logging.FileHandler("EiMmK.log", encoding="utf-8")
-    fh.setFormatter(formatter)
-    fh.setLevel(logging.INFO)
-    fh_debug = logging.FileHandler("EiMmK_debug.log", encoding="utf-8")
-    fh_debug.setFormatter(formatter)
-    fh_debug.setLevel(logging.DEBUG)
-    logger.addHandler(ch)
-    logger.addHandler(fh)
-    logger.addHandler(fh_debug)
-    if CONFIG.getboolean("logging","enable_mail_logging"):
-        mailcfg = CONFIG["mail_logging"]
+    formatter = logger.handlers[0].formatter
+    if config.getboolean("logging","enable_mail_logging"):
+        mailcfg = dict(config.items("mail_logging"))
         mailhost = (mailcfg["mailhost"], mailcfg["mailport"])
         toaddrs = mailcfg["toaddrs"].split(",")
         credentials = (mailcfg["username"], mailcfg["password"])
@@ -62,18 +55,19 @@ def __setup_logging() -> None:
                          subject=mailcfg["subject"],
                          credentials=credentials,
                          secure=(),
-                         timeout=CONFIG.getint("mail_logging",
+                         timeout=config.getint("mail_logging",
                                                "timeout"))
         eh.setFormatter(formatter)
         eh.setLevel(logging.WARNING)
         logger.addHandler(eh)
-    if CONFIG.getboolean("logging","enable_discord_logging"):
-        dh = DiscordHandler(CONFIG["discord_logging"]["username"],
-                            CONFIG["discord_logging"]["webhook_url"])
+    if config.getboolean("logging","enable_discord_logging"):
+        dh = DiscordHandler(config["discord_logging"]["username"],
+                            config["discord_logging"]["webhook_url"])
         dh.setFormatter(formatter)
         dh.setLevel(logging.WARNING)
         logger.addHandler(dh)
     logger.debug("Successfully setup logger")
+    return logger
 
 
 def __init_reddit() -> praw.Reddit:
@@ -83,9 +77,9 @@ def __init_reddit() -> praw.Reddit:
     Returns:
         praw.Reddit: Initialized reddit instance
     """
-    reddit = praw.Reddit(client_id=CONFIG["reddit"]["client_id"],
-                         client_secret=CONFIG["reddit"]["client_secret"],
-                         user_agent=CONFIG["reddit"]["user_agent"])
+    reddit = praw.Reddit(client_id=config["reddit"]["client_id"],
+                         client_secret=config["reddit"]["client_secret"],
+                         user_agent=config["reddit"]["user_agent"])
     logger.debug("Successfully initialized praw reddit instance")
     return reddit
 
@@ -128,7 +122,7 @@ def get_new_post() -> typing.Optional[praw.models.Submission]:
 
 
 def __fetch_latest_wednesday_post() -> praw.models.Submission:
-    latest_submissions = REDDIT.redditor(
+    latest_submissions = reddit.redditor(
         "SmallLebowsky").submissions.new(limit=20)
     for submission in latest_submissions:
         # BUG Has to check if wednesday in Germany but checks for UTC!
@@ -177,10 +171,9 @@ def __get_last_wednesday_date(now: dt = None) -> datetime.date:
     now = dt.combine(now.date(), datetime.time())
     return now
 
-CONFIG = __load_config()
-logger = logging.getLogger("EiMmK")
+config = __load_config()
 __setup_logging()
-REDDIT = __init_reddit()
+reddit = __init_reddit()
 
 if __name__ == "__main__":
     logger.warning("Test")
