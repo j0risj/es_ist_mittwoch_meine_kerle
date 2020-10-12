@@ -12,10 +12,10 @@ from logging.handlers import SMTPHandler
 import bs4
 import praw
 import pytz
+import requests
 from pytz import timezone
 
 from discordhandler import DiscordHandler
-import requests
 
 """
     Things that could be improved:
@@ -88,7 +88,6 @@ def __setup_advanced_logging() -> None:
         dh.setFormatter(formatter)
         dh.setLevel(logging.WARNING)
         logger.addHandler(dh)
-    logger.debug("Successfully setup advanced loggers")
 
 
 __setup_advanced_logging()
@@ -117,7 +116,7 @@ def get_new_post() -> typing.Optional[praw.models.Submission]:
         or None if none available or already fetched today
     """
 
-    if __is_date_wednesday(dt.now()):
+    if not __is_date_wednesday(dt.now()):
         logger.debug("It's not wednesday (I think)")
         return None
     try:
