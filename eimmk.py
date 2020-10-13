@@ -38,7 +38,7 @@ ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 fh = logging.FileHandler("EiMmK.log", encoding="utf-8")
 fh.setFormatter(formatter)
-fh.setLevel(logging.INFO)
+fh.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 logger.addHandler(fh)
 
@@ -136,7 +136,11 @@ def get_new_post() -> typing.Optional[praw.models.Submission]:
     try:
         post = __fetch_latest_wednesday_post()
     except PostNotFoundException:
-        logger.debug("No new post found")
+        logger.debug("Something went wrong fetching the latest wednesday post")
+        return None
+
+    if post.permalink in list(last_posts.values()):
+        logger.debug("Must be last week's post...")
         return None
 
     logger.debug("New post found")
@@ -168,15 +172,13 @@ def __fetch_latest_wednesday_post() -> praw.models.Submission:
     latest_submissions = reddit.redditor(
         "SmallLebowsky").submissions.new(limit=20)
     for submission in latest_submissions:
-        de_tz = timezone("Europe/Berlin")
-        utc_dt = dt.utcfromtimestamp(submission.created_utc)
-        submission_created = de_tz.normalize(
-            pytz.utc.localize(utc_dt).astimezone(de_tz))
-        if __is_date_wednesday(submission_created):
-            if "Mittwoch" in submission.title:
+        if "Mittwoch" in submission.title:
+            de_tz = timezone("Europe/Berlin")
+            utc_dt = dt.utcfromtimestamp(submission.created_utc)
+            submission_created = de_tz.normalize(pytz.utc.localize(utc_dt).astimezone(de_tz))
+            if __is_date_wednesday(submission_created):
                 return submission
-            else:
-                raise PostNotFoundException
+    raise PostNotFoundException
 
 
 def __is_date_wednesday(date: dt) -> bool:
