@@ -260,8 +260,9 @@ if __name__ == "__main__":
 
                 }
             ]
-            response = requests.post(config["discord"]["webhook_url"],
-                                     json=json_data)
-            response.raise_for_status()
+            webhook_urls = config["discord"]["webhook_urls"].split(",")
+            for url in webhook_urls:
+                response = requests.post(url, json=json_data)
+                response.raise_for_status()
     except Exception:
         logger.exception("Unexpected exception caught")
