@@ -3,8 +3,7 @@ import datetime
 import json
 import logging
 import logging.config
-import smtplib
-import sys
+import re
 import typing
 from datetime import datetime as dt
 from logging.handlers import SMTPHandler
@@ -171,8 +170,9 @@ def __fetch_latest_wednesday_post() -> praw.models.Submission:
     reddit = __init_reddit()
     latest_submissions = reddit.redditor(
         "SmallLebowsky").submissions.new(limit=20)
+    title_pattern = re.compile(r"(?i)Es.*meine.*")
     for submission in latest_submissions:
-        if "Mittwoch" in submission.title:
+        if title_pattern.match(submission.title) is not None:
             de_tz = timezone("Europe/Berlin")
             utc_dt = dt.utcfromtimestamp(submission.created_utc)
             submission_created = de_tz.normalize(pytz.utc.localize(utc_dt).astimezone(de_tz))
